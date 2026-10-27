@@ -66,7 +66,7 @@ test('monthly cards retain the original message month on backfill and edits', ()
     const month = buildLeaderboardView(store, 'server', { ownerId: 'alice', now });
     assert.match(month.embeds[0].description, /No scores recorded for this period/);
     const all = buildLeaderboardView(store, 'server', { ownerId: 'alice', now, period: 'alltime' });
-    assert.match(all.embeds[0].description, /100 pts\*\* · 1 game played/);
+    assert.match(all.embeds[0].description, /100 pts\*\*\n\u20031 game\n\u2003100 average pts/);
     assert.equal(store.submissions('server').length, 1);
   } finally { store.close(); }
 });
@@ -97,17 +97,17 @@ test('period switches reset pages and persist through game changes, navigation, 
     assert.equal(periodMenu(view).options.find((option) => option.value === 'monthly').default, true);
     view = await press(periodMenu(view).custom_id, ['alltime']);
     assert.match(view.embeds[0].title, /All Time/);
-    assert.match(view.embeds[0].footer.text, /Page 1\/2/);
+    assert.match(view.embeds[0].footer.text, /Page 1\/3/);
     view = await press(view.components[0].components[0].custom_id, ['krillion']);
     assert.match(view.embeds[0].title, /All Time · Krillion/);
     view = await press(buttons(view)[1].custom_id);
-    assert.match(view.embeds[0].footer.text, /Page 2\/2/);
+    assert.match(view.embeds[0].footer.text, /Page 2\/3/);
     view = await press(buttons(view)[2].custom_id);
     assert.match(view.embeds[0].title, /All Time · Krillion/);
-    assert.match(view.embeds[0].footer.text, /Page 2\/2/);
+    assert.match(view.embeds[0].footer.text, /Page 2\/3/);
     view = await press(periodMenu(view).custom_id, ['monthly']);
     assert.match(view.embeds[0].title, /Monthly · Krillion/);
-    assert.match(view.embeds[0].footer.text, /Page 1\/2/);
+    assert.match(view.embeds[0].footer.text, /Page 1\/3/);
   } finally { store.close(); }
 });
 

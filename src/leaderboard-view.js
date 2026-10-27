@@ -4,7 +4,7 @@ import {
 import { leaderboard } from './rankings.js';
 import { leaderboardPeriodLabel, submissionsForPeriod } from './leaderboard-period.js';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
 const OVERALL = '~';
 const number = (value) => Number(value.toFixed(2)).toString();
 const stateId = (action, ownerId, gameKey, page, period) => `lb:2:${action}:${ownerId}:${gameKey || OVERALL}:${page}:${period}`;
@@ -31,13 +31,14 @@ export function buildLeaderboardView(store, guildId, {
     const place = ['🥇', '🥈', '🥉'][rank - 1] || `**${rank}.**`;
     const stats = gameKey ? player.games.get(gameKey) : null;
     const count = stats ? stats.count : player.count;
-    const played = `${count} ${count === 1 ? 'game' : 'games'} played`;
-    return `${place} <@${player.userId}> — **${number(player.points)} pts** · ${played}`;
+    const played = `${count} ${count === 1 ? 'game' : 'games'}`;
+    const average = player.points / count;
+    return `${place} <@${player.userId}>\n\u2003**${number(player.points)} pts**\n\u2003${played}\n\u2003${number(average)} average pts`;
   });
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(`🏆 ${period === 'monthly' ? 'Monthly' : 'All Time'} · ${game ? game.name : 'Overall'} leaderboard`)
-    .setDescription(lines.join('\n') || 'No scores recorded for this period. Share a result in the tracked channel or use /backfill.')
+    .setDescription(lines.join('\n\n') || 'No scores recorded for this period. Share a result in a tracked channel or use /backfill.')
     .setFooter({ text: `${periodLabel} · Page ${page}/${pages} · ${rows.length} players · Updated` })
     .setTimestamp(now);
 

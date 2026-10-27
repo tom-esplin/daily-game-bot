@@ -13,12 +13,12 @@ try {
     partials: [Partials.Message, Partials.Channel],
     allowedMentions: { parse: [] },
   });
-  client.once(Events.ClientReady, (ready) => console.log(`Logged in as ${ready.user.tag}. Use /track to choose a channel.`));
+  client.once(Events.ClientReady, (ready) => console.log(`Logged in as ${ready.user.tag}. Use /track to add score channels.`));
   client.on(Events.MessageCreate, (message) => {
     try { store.ingest(message); } catch (error) { console.error('Could not record a message:', error.message); }
   });
   client.on(Events.MessageUpdate, async (_previous, message) => {
-    if (!message.guildId || store.channel(message.guildId) !== message.channelId) return;
+    if (!message.guildId || !store.isTracked(message.guildId, message.channelId)) return;
     try {
       if (message.partial) message = await message.fetch();
       store.ingest(message);

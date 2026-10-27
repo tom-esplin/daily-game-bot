@@ -111,7 +111,7 @@ test('Music Timeliner score, leaderboard, game list, and autocomplete commands w
     interaction.commandName = 'leaderboard';
     await handleInteraction(interaction, store);
     assert.match(reply.embeds[0].title, /Music Timeliner leaderboard/);
-    assert.match(reply.embeds[0].description, /75 pts\*\* · 1 game played/);
+    assert.match(reply.embeds[0].description, /75 pts\*\*\n\u20031 game\n\u200375 average pts/);
     interaction.commandName = 'game';
     await handleInteraction(interaction, store);
     assert.match(reply.content, /12\.5 points per green square.*maximum 100.*rounded down/);

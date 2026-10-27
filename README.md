@@ -17,8 +17,8 @@ Requires Node.js 24 or newer.
    npm start
    ```
 
-5. In your server, run `/track channel:#daily-games`. This requires **Manage Server** permission and automatically adds Krillion, Maptap, Codenames Daily, and Music Timeliner.
-6. Paste a result into that channel, then run `/leaderboard` or `/score game:krillion`.
+5. In your server, run `/track channel:#daily-games`. Repeat for every channel you want to track. This requires **Manage Server** permission and automatically adds Krillion, Maptap, Codenames Daily, and Music Timeliner.
+6. Paste a result into any tracked channel, then run `/leaderboard` or `/score game:krillion`.
 
 The bot must remain running to collect new posts. Registration installs this project's commands into the server named by `DISCORD_GUILD_ID`; repeat registration for each server where you install the bot. Running registration replaces this application's server command list.
 
@@ -26,22 +26,26 @@ The bot must remain running to collect new posts. Registration installs this pro
 
 | Command | Purpose |
 | --- | --- |
-| `/track channel` | Choose the channel; requires Manage Server |
-| `/leaderboard [game] [page] [period]` | Monthly totals by default; choose All Time; interactive menus and 10 players per page |
+| `/track channel` | Add a tracked channel without replacing others; requires Manage Server |
+| `/untrack channel` | Stop tracking a channel and retain recorded scores; requires Manage Server |
+| `/channels [page]` | List tracked channels, 20 per page; requires Manage Server |
+| `/leaderboard [game] [page] [period]` | Monthly totals by default; choose All Time; interactive menus and 5 players per page |
 | `/score game [user] [puzzle]` | Last 10 results, or one puzzle; defaults to your user |
 | `/game list` | List games, templates, and score direction |
 | `/game add key name template direction` | Add a game; requires Manage Server |
 | `/game disable game` | Pause collection and hide that game's scores; requires Manage Server |
 | `/game enable game` | Resume collection and restore stored scores; requires Manage Server |
-| `/backfill [limit]` | Import the latest 1–10,000 messages, default 100; requires Manage Server |
+| `/backfill [limit] [channel]` | Import 1–10,000 messages per tracked channel, default 100; optionally select one channel; requires Manage Server |
 
 Replies are private to the person who runs the command. Tracking is configured separately for each server; scores never cross server boundaries.
 
-Use `/backfill limit:10000` for a larger historical import. Messages are fetched in batches of at most 100, with progress updates every 1,000 messages. The import stops at the requested limit or the beginning of the channel history. Reimporting existing messages updates their scores without duplicating them. One backfill can run per server at a time; keep the bot running until it finishes. Re-register commands once after updating to make the larger limit available in Discord.
+A server can track any number of text channels with no bot-imposed channel limit. Use `/track` to add each one, `/channels` to list them, and `/untrack` to stop collecting new posts from one. All channels contribute to the same server leaderboards. Existing single-channel settings migrate automatically on restart.
+
+Use `/backfill limit:10000` to scan up to 10,000 messages **per tracked channel**. To import only one, use `/backfill channel:#daily-games limit:10000`. Channels are scanned sequentially in batches of at most 100 messages, with progress updates every 1,000 messages and between channels. Each channel stops at the requested limit or the beginning of its history. Unavailable channels are reported while other channels continue. Reimporting existing messages updates scores without duplicating them. A player's result for the same game and puzzle counts once across all channels; the newest source post wins. One backfill can run per server at a time; keep the bot running until it finishes. Re-register commands after updating to add `/untrack`, `/channels`, and the backfill channel option.
 
 The leaderboard defaults to **Monthly**, adding together all scores posted during the current calendar month. Choose **All Time** from the period dropdown to total scores from every recorded month. Both views work for Overall and individual games. You can also run `/leaderboard period:alltime` or `/leaderboard game:maptapp period:monthly`.
 
-The card shows each player on one line with a medal or rank, total score, and the number of daily results included, such as `4 games played`. Overall cards add scores converted to 0–100 per result; per-game cards add native scores. Individual results are available through `/score`. The game dropdown, period dropdown, Previous/Next, and Refresh update the same private reply. Changing a game or period resets to page 1. The footer shows the month or All Time, page, player count, and update time. Only the person who opened the leaderboard can use its controls. If a game is disabled while the card is open, the next interaction returns to Overall; if a page disappears, it moves to the last available page. Discord may expire old private replies; run `/leaderboard` again when needed.
+The card shows each player as a separate block: their medal/rank and name, then indented lines for total points, the number of results (such as `97 games`), and average points per game. The average is the displayed total divided by that player's game count in the selected period. Overall cards add scores converted to 0–100 per result; per-game cards add native scores. Individual results are available through `/score`. The game dropdown, period dropdown, Previous/Next, and Refresh update the same private reply. Changing a game or period resets to page 1. The footer shows the month or All Time, page, player count, and update time. Only the person who opened the leaderboard can use its controls. If a game is disabled while the card is open, the next interaction returns to Overall; if a page disappears, it moves to the last available page. Discord may expire old private replies; run `/leaderboard` again when needed.
 
 Monthly boundaries use the original Discord message posting timestamp in `America/Denver`, configured in `src/leaderboard-period.js`. This also applies to games that include a puzzle date: the posting date decides leaderboard membership. Backfill uses the original timestamp, and edits do not move a message to the current month. The view switches automatically when a new calendar month begins; Refresh loads the current month's standings. Changing the time-zone setting requires a restart. Re-register commands once to add the `period` option, then restart the bot. Existing stored scores can be totaled immediately, without a new backfill for this leaderboard change.
 
@@ -179,7 +183,7 @@ Unplayed games add no points. Participation counts the daily results included in
 - Reimporting a message is safe. Message edits replace its parsed results; removing the recognizable result removes its score. Deleting the winning message restores an earlier matching post if one is stored.
 - Message edits and deletions are processed while connected. `/backfill` refreshes existing posts but cannot discover posts deleted while the bot was offline; those require a future reconciliation feature.
 - Disabled games retain their saved scores. Re-enable and backfill to import posts shared while disabled.
-- Changing the tracked channel retains past scores. Backfill imports only the currently tracked channel.
+- Adding a tracked channel keeps all existing channels. Untracking retains scores already recorded; subsequent posts and edits from that channel are ignored. Backfill scans all currently tracked channels unless one is selected explicitly.
 - Data defaults to `data/scores.sqlite`; set `DATABASE_PATH` to change it. Stop the bot before copying the database for a simple consistent backup. Retain the database across redeployments.
 
 ## Development

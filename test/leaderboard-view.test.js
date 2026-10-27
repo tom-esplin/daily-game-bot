@@ -28,6 +28,22 @@ function component(customId, values) {
 
 const buttons = (view) => view.components.at(-1).components;
 
+test('player blocks show total, game count, and the average for overall and individual games', () => {
+  const store = new Store(':memory:');
+  try {
+    store.track('server', 'channel');
+    for (const [index, content] of ['Krillion #1\n350', 'Krillion #2\n700', 'www.maptap.gg October 26\nFinal score: 500'].entries()) {
+      store.ingest({ guildId: 'server', channelId: 'channel', id: String(100 + index),
+        author: { id: 'alice', username: 'Alice', bot: false }, createdTimestamp: Date.now(), content });
+    }
+    const overall = buildLeaderboardView(store, 'server', { ownerId: 'alice' });
+    assert.equal(overall.embeds[0].description, '🥇 <@alice>\n\u2003**200 pts**\n\u20033 games\n\u200366.67 average pts');
+    const game = buildLeaderboardView(store, 'server', { ownerId: 'alice', gameKey: 'krillion' });
+    assert.equal(game.embeds[0].description, '🥇 <@alice>\n\u2003**1050 pts**\n\u20032 games\n\u2003525 average pts');
+    assert.ok(overall.embeds[0].description.length <= 4096);
+  } finally { store.close(); }
+});
+
 test('leaderboard card shows medals, score details, timestamp, and page boundary controls', () => {
   const store = new Store(':memory:');
   try {
@@ -35,20 +51,18 @@ test('leaderboard card shows medals, score details, timestamp, and page boundary
     const now = new Date();
     const view = buildLeaderboardView(store, 'server', { ownerId: '123', now });
     assert.equal(view.embeds[0].title, '🏆 Monthly · Overall leaderboard');
-    assert.match(view.embeds[0].description, /🥇 <@1011> — \*\*15\.71 pts\*\*/);
-    assert.match(view.embeds[0].description, /1 game played/);
-    assert.match(view.embeds[0].description, /\*\*15\.71 pts\*\* · 1 game played/);
-    assert.equal(view.embeds[0].description.split('\n').length, 10);
-    assert.equal(view.embeds[0].description.match(/<@/g).length, 10);
-    assert.match(view.embeds[0].footer.text, /Page 1\/2 · 12 players/);
+    assert.match(view.embeds[0].description, /🥇 <@1011>\n\u2003\*\*15\.71 pts\*\*\n\u20031 game\n\u200315\.71 average pts/);
+    assert.equal(view.embeds[0].description.split('\n\n').length, 5);
+    assert.equal(view.embeds[0].description.match(/<@/g).length, 5);
+    assert.match(view.embeds[0].footer.text, /Page 1\/3 · 12 players/);
     assert.equal(view.embeds[0].timestamp, now.toISOString());
     assert.equal(buttons(view)[0].disabled, true);
     assert.equal(buttons(view)[1].disabled, false);
     assert.equal(view.components[0].components[0].options[0].default, true);
     assert.deepEqual(view.allowedMentions, { parse: [] });
-    const last = buildLeaderboardView(store, 'server', { ownerId: '123', page: 2, gameKey: 'krillion' });
+    const last = buildLeaderboardView(store, 'server', { ownerId: '123', page: 3, gameKey: 'krillion' });
     assert.equal(last.embeds[0].description.match(/<@/g).length, 2);
-    assert.match(last.embeds[0].description, /pts\*\* · 1 game played/);
+    assert.match(last.embeds[0].description, /pts\*\*\n\u20031 game\n/);
     assert.doesNotMatch(last.embeds[0].description, /avg score/);
     assert.equal(buttons(last)[0].disabled, false);
     assert.equal(buttons(last)[1].disabled, true);
@@ -63,15 +77,15 @@ test('Next, Previous, and game selection update the existing reply and preserve 
     const next = component(buttons(initial)[1].custom_id);
     await handleInteraction(next, store);
     assert.equal(next.acknowledged, true);
-    assert.match(next.result.embeds[0].footer.text, /Page 2\/2/);
+    assert.match(next.result.embeds[0].footer.text, /Page 2\/3/);
     const previous = component(buttons(next.result)[0].custom_id);
     await handleInteraction(previous, store);
-    assert.match(previous.result.embeds[0].footer.text, /Page 1\/2/);
+    assert.match(previous.result.embeds[0].footer.text, /Page 1\/3/);
     const select = component(next.result.components[0].components[0].custom_id, ['krillion']);
     await handleInteraction(select, store);
     assert.equal(select.result.embeds[0].title, '🏆 Monthly · Krillion leaderboard');
-    assert.match(select.result.embeds[0].footer.text, /Page 1\/2/);
-    assert.match(select.result.embeds[0].description, /110 pts\*\* · 1 game played/);
+    assert.match(select.result.embeds[0].footer.text, /Page 1\/3/);
+    assert.match(select.result.embeds[0].description, /110 pts\*\*\n\u20031 game\n\u2003110 average pts/);
     assert.equal(select.result.components[0].components[0].options.find((option) => option.value === 'krillion').default, true);
     const overall = component(select.result.components[0].components[0].custom_id, ['~']);
     await handleInteraction(overall, store);
@@ -84,12 +98,12 @@ test('Refresh loads live scores, recovers a disappearing page, and falls back fr
   const store = new Store(':memory:');
   try {
     seed(store);
-    const initial = buildLeaderboardView(store, 'server', { ownerId: '123', page: 2, gameKey: 'krillion' });
+    const initial = buildLeaderboardView(store, 'server', { ownerId: '123', page: 3, gameKey: 'krillion' });
     store.removeMessage('server', '100');
     store.removeMessage('server', '101');
     const refresh = component(buttons(initial)[2].custom_id);
     await handleInteraction(refresh, store);
-    assert.match(refresh.result.embeds[0].footer.text, /Page 1\/1 · 10 players/);
+    assert.match(refresh.result.embeds[0].footer.text, /Page 2\/2 · 10 players/);
     store.setEnabled('server', 'krillion', false);
     const disabled = component(buttons(refresh.result)[2].custom_id);
     await handleInteraction(disabled, store);

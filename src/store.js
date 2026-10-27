@@ -18,6 +18,11 @@ export class Store {
       CREATE TABLE IF NOT EXISTS settings (
         guild_id TEXT PRIMARY KEY, channel_id TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS tracked_channels (
+        guild_id TEXT NOT NULL, channel_id TEXT NOT NULL,
+        PRIMARY KEY(guild_id, channel_id)
+      );
+      CREATE TABLE IF NOT EXISTS app_migrations (name TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS games (
         guild_id TEXT NOT NULL, key TEXT NOT NULL, name TEXT NOT NULL,
         template TEXT NOT NULL, direction TEXT NOT NULL CHECK(direction IN ('higher','lower')),
@@ -39,16 +44,37 @@ export class Store {
     if (!this.db.prepare('PRAGMA table_info(games)').all().some((column) => column.name === 'parser')) {
       this.db.exec("ALTER TABLE games ADD COLUMN parser TEXT NOT NULL DEFAULT 'template'");
     }
-    for (const setting of this.db.prepare('SELECT guild_id FROM settings').all()) {
+    if (!this.db.prepare('SELECT 1 FROM app_migrations WHERE name=?').get('multi-channel-tracking-v1')) {
+      this.db.exec('BEGIN');
+      try {
+        this.db.exec('INSERT OR IGNORE INTO tracked_channels SELECT guild_id, channel_id FROM settings');
+        this.db.prepare('INSERT INTO app_migrations VALUES (?)').run('multi-channel-tracking-v1');
+        this.db.exec('COMMIT');
+      } catch (error) {
+        this.db.exec('ROLLBACK');
+        throw error;
+      }
+    }
+    for (const setting of this.db.prepare('SELECT DISTINCT guild_id FROM tracked_channels').all()) {
       this.addBuiltInGames(setting.guild_id);
     }
   }
 
   close() { this.db.close(); }
-  channel(guildId) { return this.db.prepare('SELECT channel_id FROM settings WHERE guild_id = ?').get(guildId)?.channel_id; }
+  channels(guildId) {
+    return this.db.prepare('SELECT channel_id FROM tracked_channels WHERE guild_id=? ORDER BY channel_id').all(guildId)
+      .map((row) => row.channel_id);
+  }
+  isTracked(guildId, channelId) {
+    return Boolean(this.db.prepare('SELECT 1 FROM tracked_channels WHERE guild_id=? AND channel_id=?').get(guildId, channelId));
+  }
   track(guildId, channelId) {
-    this.db.prepare('INSERT INTO settings VALUES (?, ?) ON CONFLICT(guild_id) DO UPDATE SET channel_id=excluded.channel_id').run(guildId, channelId);
+    const result = this.db.prepare('INSERT OR IGNORE INTO tracked_channels VALUES (?, ?)').run(guildId, channelId);
     this.addBuiltInGames(guildId);
+    return result.changes > 0;
+  }
+  untrack(guildId, channelId) {
+    return this.db.prepare('DELETE FROM tracked_channels WHERE guild_id=? AND channel_id=?').run(guildId, channelId).changes > 0;
   }
   addBuiltInGames(guildId) {
     const insert = this.db.prepare(`INSERT OR IGNORE INTO games
@@ -84,7 +110,7 @@ export class Store {
     this.db.prepare('DELETE FROM submissions WHERE guild_id = ? AND message_id = ?').run(guildId, messageId);
   }
   ingest(message) {
-    if (!message.guildId || message.author?.bot || this.channel(message.guildId) !== message.channelId) return 0;
+    if (!message.guildId || message.author?.bot || !this.isTracked(message.guildId, message.channelId)) return 0;
     const parsed = this.games(message.guildId, true).flatMap((game) => {
       const builtInParser = builtInParsers[game.parser];
       const result = builtInParser ? builtInParser(message.content)

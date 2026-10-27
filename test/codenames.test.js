@@ -105,7 +105,7 @@ test('existing databases gain the built-in parser without losing scores or custo
   let store;
   try {
     store = new Store(path);
-    assert.equal(store.channel('server'), 'channel');
+    assert.deepEqual(store.channels('server'), ['channel']);
     assert.equal(store.game('server', 'custom').parser, 'template');
     assert.equal(store.game('server', 'custom').direction, 'lower');
     assert.equal(store.game('server', 'codenames').parser, 'codenames');

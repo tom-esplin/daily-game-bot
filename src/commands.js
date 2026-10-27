@@ -4,10 +4,17 @@ import { DEFAULT_BACKFILL_LIMIT, MAX_BACKFILL_LIMIT } from './backfill.js';
 const gameOption = (option) => option.setName('game').setDescription('Game key, for example krillion').setMaxLength(32).setAutocomplete(true);
 
 export const commands = [
-  new SlashCommandBuilder().setName('track').setDescription('Choose the channel to track daily game scores')
+  new SlashCommandBuilder().setName('track').setDescription('Add a channel to track daily game scores')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addChannelOption((option) => option.setName('channel').setDescription('Channel containing shared scores').setRequired(true)
       .addChannelTypes(ChannelType.GuildText)),
+  new SlashCommandBuilder().setName('untrack').setDescription('Stop tracking a channel and keep its recorded scores')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addChannelOption((option) => option.setName('channel').setDescription('Channel to stop tracking').setRequired(true)
+      .addChannelTypes(ChannelType.GuildText)),
+  new SlashCommandBuilder().setName('channels').setDescription('List tracked score channels')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addIntegerOption((option) => option.setName('page').setDescription('Page number').setMinValue(1)),
   new SlashCommandBuilder().setName('leaderboard').setDescription('Show monthly or all-time score totals')
     .addStringOption(gameOption)
     .addIntegerOption((option) => option.setName('page').setDescription('Page number').setMinValue(1))
@@ -29,9 +36,11 @@ export const commands = [
       .addStringOption((option) => gameOption(option).setRequired(true)))
     .addSubcommand((sub) => sub.setName('disable').setDescription('Pause a game (Manage Server permission required)')
       .addStringOption((option) => gameOption(option).setRequired(true))),
-  new SlashCommandBuilder().setName('backfill').setDescription('Import recent channel messages (Manage Server permission required)')
+  new SlashCommandBuilder().setName('backfill').setDescription('Import tracked channel history (Manage Server permission required)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addIntegerOption((option) => option.setName('limit')
-      .setDescription(`Messages to scan; defaults to ${DEFAULT_BACKFILL_LIMIT}, maximum ${MAX_BACKFILL_LIMIT.toLocaleString('en-US')}`)
-      .setMinValue(1).setMaxValue(MAX_BACKFILL_LIMIT)),
+      .setDescription(`Messages per channel; defaults to ${DEFAULT_BACKFILL_LIMIT}, maximum ${MAX_BACKFILL_LIMIT.toLocaleString('en-US')}`)
+      .setMinValue(1).setMaxValue(MAX_BACKFILL_LIMIT))
+    .addChannelOption((option) => option.setName('channel').setDescription('Optional tracked channel; defaults to all tracked channels')
+      .addChannelTypes(ChannelType.GuildText)),
 ].map((command) => command.setDMPermission(false).toJSON());
