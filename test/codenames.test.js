@@ -135,10 +135,10 @@ test('score lookup and game list expose Codenames with the calculated score', as
       guildId: 'server', commandName: 'score', user: { id: 'alice' },
       isAutocomplete: () => false, isChatInputCommand: () => true,
       deferReply: async () => {}, editReply: async (value) => { reply = value; },
-      options: { getString: (name) => name === 'game' ? 'codenames' : '22.10.2026', getUser: () => null },
+      options: { getString: (name) => name === 'game' ? 'codenames' : 'alltime', getUser: () => null },
     };
     await handleInteraction(interaction, store);
-    assert.match(reply.content, /2026-10-22: \*\*100\*\*/);
+    assert.match(reply.embeds[0].description, /100 pts\*\*\n\u20031 game/);
     interaction.commandName = 'game';
     interaction.options.getSubcommand = () => 'list';
     await handleInteraction(interaction, store);

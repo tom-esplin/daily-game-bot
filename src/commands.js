@@ -20,10 +20,11 @@ export const commands = [
     .addIntegerOption((option) => option.setName('page').setDescription('Page number').setMinValue(1))
     .addStringOption((option) => option.setName('period').setDescription('Defaults to the current month')
       .addChoices({ name: 'Monthly', value: 'monthly' }, { name: 'All Time', value: 'alltime' })),
-  new SlashCommandBuilder().setName('score').setDescription('Show a player’s recent scores for one game')
-    .addStringOption((option) => gameOption(option).setRequired(true))
+  new SlashCommandBuilder().setName('score').setDescription('Show a player’s monthly or all-time total')
+    .addStringOption(gameOption)
     .addUserOption((option) => option.setName('user').setDescription('Player; defaults to you'))
-    .addStringOption((option) => option.setName('puzzle').setDescription('Optional puzzle number or date, e.g. 2026-10-20').setMaxLength(30)),
+    .addStringOption((option) => option.setName('period').setDescription('Defaults to the current month')
+      .addChoices({ name: 'Monthly', value: 'monthly' }, { name: 'All Time', value: 'alltime' })),
   new SlashCommandBuilder().setName('game').setDescription('List or configure tracked games')
     .addSubcommand((sub) => sub.setName('list').setDescription('Show game keys and parsing templates'))
     .addSubcommand((sub) => sub.setName('add').setDescription('Add a game (Manage Server permission required)')

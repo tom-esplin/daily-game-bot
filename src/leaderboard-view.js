@@ -3,10 +3,10 @@ import {
 } from 'discord.js';
 import { leaderboard } from './rankings.js';
 import { leaderboardPeriodLabel, submissionsForPeriod } from './leaderboard-period.js';
+import { formatPlayerScore } from './score-view.js';
 
 const PAGE_SIZE = 5;
 const OVERALL = '~';
-const number = (value) => Number(value.toFixed(2)).toString();
 const stateId = (action, ownerId, gameKey, page, period) => `lb:2:${action}:${ownerId}:${gameKey || OVERALL}:${page}:${period}`;
 
 export function buildLeaderboardView(store, guildId, {
@@ -31,9 +31,7 @@ export function buildLeaderboardView(store, guildId, {
     const place = ['🥇', '🥈', '🥉'][rank - 1] || `**${rank}.**`;
     const stats = gameKey ? player.games.get(gameKey) : null;
     const count = stats ? stats.count : player.count;
-    const played = `${count} ${count === 1 ? 'game' : 'games'}`;
-    const average = player.points / count;
-    return `${place} <@${player.userId}>\n\u2003**${number(player.points)} pts**\n\u2003${played}\n\u2003${number(average)} average pts`;
+    return `${place} ${formatPlayerScore(player.userId, player.points, count)}`;
   });
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)

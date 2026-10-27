@@ -1,6 +1,6 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { buildLeaderboardView, handleLeaderboardComponent } from './leaderboard-view.js';
-import { normalizePuzzle } from './parser.js';
+import { buildUserScoreView } from './score-view.js';
 import { DEFAULT_BACKFILL_LIMIT, importChannelHistory, validateBackfillLimit } from './backfill.js';
 
 const number = (value) => Number(value.toFixed(2)).toString();
@@ -11,12 +11,6 @@ function requireAdmin(interaction) {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
     throw new Error('You need Manage Server permission to change tracking settings or import messages.');
   }
-}
-
-function requireGame(store, guildId, key) {
-  const game = store.game(guildId, key);
-  if (!game) throw new Error('Unknown game. Use /game list to see game keys.');
-  return game;
 }
 
 export async function handleInteraction(interaction, store) {
@@ -105,18 +99,12 @@ export async function handleInteraction(interaction, store) {
       return;
     }
     case 'score': {
-      const key = interaction.options.getString('game', true);
-      const game = requireGame(store, guildId, key);
-      if (!game.enabled) throw new Error('Enable this game to query its stored scores.');
       const user = interaction.options.getUser('user') || interaction.user;
-      const puzzle = interaction.options.getString('puzzle');
-      const puzzleId = puzzle ? normalizePuzzle(puzzle) : null;
-      if (puzzle && puzzleId === null) throw new Error('Puzzle must be a number or valid date, such as 2026-10-20, 20.10.2026, or October 20.');
-      const rows = store.submissions(guildId).filter((row) => row.game_key === key && row.user_id === user.id && (!puzzle || row.puzzle === puzzleId))
-        .sort((a, b) => (/^\d+$/.test(a.puzzle) && /^\d+$/.test(b.puzzle)
-          ? Number(b.puzzle) - Number(a.puzzle) : b.puzzle.localeCompare(a.puzzle)) || b.created_at - a.created_at).slice(0, 10);
-      content = `**${safeName(game.name)} scores for <@${user.id}>**\n${rows.map((row) => `${/^\d+$/.test(row.puzzle) ? '#' : ''}${row.puzzle}: **${number(row.score)}** — [message](https://discord.com/channels/${guildId}/${row.channel_id}/${row.message_id})`).join('\n') || 'No matching scores recorded.'}`;
-      break;
+      await interaction.editReply(buildUserScoreView(store, guildId, {
+        userId: user.id, gameKey: interaction.options.getString('game'),
+        period: interaction.options.getString('period') || 'monthly',
+      }));
+      return;
     }
     case 'backfill': {
       requireAdmin(interaction);

@@ -30,7 +30,7 @@ The bot must remain running to collect new posts. Registration installs this pro
 | `/untrack channel` | Stop tracking a channel and retain recorded scores; requires Manage Server |
 | `/channels [page]` | List tracked channels, 20 per page; requires Manage Server |
 | `/leaderboard [game] [page] [period]` | Monthly totals by default; choose All Time; interactive menus and 5 players per page |
-| `/score game [user] [puzzle]` | Last 10 results, or one puzzle; defaults to your user |
+| `/score [game] [user] [period]` | User total, games, and average; defaults to your monthly overall score |
 | `/game list` | List games, templates, and score direction |
 | `/game add key name template direction` | Add a game; requires Manage Server |
 | `/game disable game` | Pause collection and hide that game's scores; requires Manage Server |
@@ -45,7 +45,9 @@ Use `/backfill limit:10000` to scan up to 10,000 messages **per tracked channel*
 
 The leaderboard defaults to **Monthly**, adding together all scores posted during the current calendar month. Choose **All Time** from the period dropdown to total scores from every recorded month. Both views work for Overall and individual games. You can also run `/leaderboard period:alltime` or `/leaderboard game:maptapp period:monthly`.
 
-The card shows each player as a separate block: their medal/rank and name, then indented lines for total points, the number of results (such as `97 games`), and average points per game. The average is the displayed total divided by that player's game count in the selected period. Overall cards add scores converted to 0–100 per result; per-game cards add native scores. Individual results are available through `/score`. The game dropdown, period dropdown, Previous/Next, and Refresh update the same private reply. Changing a game or period resets to page 1. The footer shows the month or All Time, page, player count, and update time. Only the person who opened the leaderboard can use its controls. If a game is disabled while the card is open, the next interaction returns to Overall; if a page disappears, it moves to the last available page. Discord may expire old private replies; run `/leaderboard` again when needed.
+The card shows each player as a separate block: their medal/rank and name, then indented lines for pts, the number of results (such as `97 games`), and average pts. The average is the displayed total divided by that player's game count in the selected period. Overall cards add scores converted to 0–100 per result; per-game cards add native scores. `/score` shows the same totals for one player. The game dropdown, period dropdown, Previous/Next, and Refresh update the same private reply. Changing a game or period resets to page 1. The footer shows the month or All Time, page, player count, and update time. Only the person who opened the leaderboard can use its controls. If a game is disabled while the card is open, the next interaction returns to Overall; if a page disappears, it moves to the last available page. Discord may expire old private replies; run `/leaderboard` again when needed.
+
+`/score` defaults to your own current-month overall total. Use `/score period:alltime` for your all-time overall score, `/score user:@Alice period:monthly` for another user's monthly total, or `/score game:maptapp user:@Alice period:alltime` to total one game. Replies include points, game count, and average points using the leaderboard's period, normalization, and deduplication rules. A user without results gets 0 points and 0 games. The former puzzle-specific score lookup has been replaced by these summaries; re-register commands and restart after updating. Existing saved results require no backfill for this command change.
 
 Monthly boundaries use the original Discord message posting timestamp in `America/Denver`, configured in `src/leaderboard-period.js`. This also applies to games that include a puzzle date: the posting date decides leaderboard membership. Backfill uses the original timestamp, and edits do not move a message to the current month. The view switches automatically when a new calendar month begins; Refresh loads the current month's standings. Changing the time-zone setting requires a restart. Re-register commands once to add the `period` option, then restart the bot. Existing stored scores can be totaled immediately, without a new backfill for this leaderboard change.
 
@@ -92,7 +94,7 @@ www.maptap.gg October 26
 Final score: 434
 ```
 
-Date puzzles are stored as `YYYY-MM-DD`. When the share omits the year, the bot uses the date closest to the original message's UTC timestamp, considering the preceding, current, and following year. This keeps historical imports stable across restarts and avoids merging different years. A share posted many months after its puzzle can have an ambiguous year; use a template matching an explicit year when available. Query a dated puzzle with `/score game:maptapp puzzle:2026-10-20`.
+Date puzzles are stored as `YYYY-MM-DD`. When the share omits the year, the bot uses the date closest to the original message's UTC timestamp, considering the preceding, current, and following year. This keeps historical imports stable across restarts and avoids merging different years. A share posted many months after its puzzle can have an ambiguous year; use a template matching an explicit year when available. View your Maptap monthly total with `/score game:maptapp`.
 
 Then run `/backfill` if you want to import existing posts. This version supports 25 games per server. Each message can contribute one result per matching game. Failure symbols such as Wordle `X/6`, times such as `1:23`, other nonnumeric puzzle IDs, and scores requiring calculations need future parser extensions. Failed results are currently ignored. Templates can be checked locally with the parser tests; editing an existing game's template is not yet exposed as a command.
 
@@ -126,7 +128,7 @@ floor(
 
 The example earns `floor(30 + 30 + 30 + 10) = 100`. Each of the first three rounds independently earns up to 30 points, regardless of how many target words it contains. The fourth independently adds up to 10 bonus points, with the complete score capped at 100. Only the final total is rounded down to an integer. Two perfect main rounds with zero in the other rounds earn 60. Correct guesses before a `❌` earn partial credit, and remaining unguessed target words earn none. The bot requires all four round results and ignores incomplete or malformed shares.
 
-Run `/backfill` to import older Codenames shares, or recalculate previously imported shares after a scoring change. Use `/score game:codenames puzzle:22.10.2026` or `/leaderboard game:codenames`. Score lookups show the calculated integer score, with a maximum of 100. `/game disable game:codenames` pauses it without deleting saved scores. Old stored results retain their previous scoring until their source messages are reimported; backfill the relevant messages after updating.
+Run `/backfill` to import older Codenames shares, or recalculate previously imported shares after a scoring change. Use `/score game:codenames` for your monthly total or `/leaderboard game:codenames` for standings. Individual Codenames results score up to 100; the period total can exceed 100. `/game disable game:codenames` pauses it without deleting saved scores. Old stored results retain their previous scoring until their source messages are reimported; backfill the relevant messages after updating.
 
 ## Music Timeliner
 
@@ -144,7 +146,7 @@ https://musictimeliner.com/
 
 This example records a score of `75` for puzzle `29` (six green squares × 12.5). A result containing only red squares records `0`; a title and link without any squares records nothing. Results must include the square characters in the Discord message text.
 
-After restarting, run `/backfill` to import existing shares or recalculate scores saved under the previous scoring rule, `/leaderboard game:musictimeliner` for standings, or `/score game:musictimeliner puzzle:29` for your result. Music Timeliner contributes equally to the overall leaderboard, using its score out of 100.
+After restarting, run `/backfill` to import existing shares or recalculate scores saved under the previous scoring rule, `/leaderboard game:musictimeliner` for standings, or `/score game:musictimeliner` for your monthly total. Music Timeliner contributes up to 100 points per result to the overall leaderboard.
 
 ## Ranking rules
 

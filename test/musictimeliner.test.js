@@ -102,12 +102,12 @@ test('Music Timeliner score, leaderboard, game list, and autocomplete commands w
       isAutocomplete: () => false, isChatInputCommand: () => true,
       deferReply: async () => {}, editReply: async (value) => { reply = value; },
       options: {
-        getString: (name) => name === 'game' ? 'musictimeliner' : name === 'puzzle' ? '29' : null,
+        getString: (name) => name === 'game' ? 'musictimeliner' : null,
         getUser: () => null, getInteger: () => null, getSubcommand: () => 'list', getFocused: () => 'music',
       },
     };
     await handleInteraction(interaction, store);
-    assert.match(reply.content, /#29: \*\*75\*\*/);
+    assert.match(reply.embeds[0].description, /75 pts\*\*\n\u20031 game/);
     interaction.commandName = 'leaderboard';
     await handleInteraction(interaction, store);
     assert.match(reply.embeds[0].title, /Music Timeliner leaderboard/);
