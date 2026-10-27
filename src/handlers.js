@@ -1,6 +1,7 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { buildLeaderboardView, handleLeaderboardComponent } from './leaderboard-view.js';
 import { normalizePuzzle } from './parser.js';
+import { DEFAULT_BACKFILL_LIMIT, importChannelHistory } from './backfill.js';
 
 const number = (value) => Number(value.toFixed(2)).toString();
 const safeName = (value) => value.replace(/[`*_~|<>@\\]/g, '').replace(/[\r\n]/g, ' ');
@@ -108,19 +109,13 @@ export async function handleInteraction(interaction, store) {
       try {
         const channel = await interaction.guild.channels.fetch(channelId);
         if (!channel?.isTextBased() || !channel.messages) throw new Error('The tracked channel is unavailable. Use /track to select another.');
-        const limit = interaction.options.getInteger('limit') || 100;
-        let scanned = 0;
-        let matched = 0;
-        let before;
-        while (scanned < limit) {
-          const batch = await channel.messages.fetch({ limit: Math.min(100, limit - scanned), ...(before ? { before } : {}) });
-          if (!batch.size) break;
-          for (const message of batch.values()) {
-            matched += store.ingest(message);
-            scanned++;
-          }
-          before = batch.last().id;
-        }
+        const limit = interaction.options.getInteger('limit') ?? DEFAULT_BACKFILL_LIMIT;
+        const { scanned, matched } = await importChannelHistory(channel, store, {
+          limit,
+          onProgress: async ({ scanned, matched }) => {
+            await interaction.editReply({ content: `Importing… scanned ${scanned.toLocaleString('en-US')} of up to ${limit.toLocaleString('en-US')} messages; processed ${matched.toLocaleString('en-US')} game submissions.`, allowedMentions: { parse: [] } });
+          },
+        });
         content = `Scanned ${scanned} messages and processed ${matched} game submissions. Reimporting a message does not duplicate scores.`;
       } finally {
         busyGuilds.delete(guildId);

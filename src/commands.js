@@ -1,4 +1,5 @@
 import { ChannelType, PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import { DEFAULT_BACKFILL_LIMIT, MAX_BACKFILL_LIMIT } from './backfill.js';
 
 const gameOption = (option) => option.setName('game').setDescription('Game key, for example krillion').setMaxLength(32).setAutocomplete(true);
 
@@ -30,5 +31,7 @@ export const commands = [
       .addStringOption((option) => gameOption(option).setRequired(true))),
   new SlashCommandBuilder().setName('backfill').setDescription('Import recent channel messages (Manage Server permission required)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addIntegerOption((option) => option.setName('limit').setDescription('Messages to scan; defaults to 100').setMinValue(1).setMaxValue(1000)),
+    .addIntegerOption((option) => option.setName('limit')
+      .setDescription(`Messages to scan; defaults to ${DEFAULT_BACKFILL_LIMIT}, maximum ${MAX_BACKFILL_LIMIT.toLocaleString('en-US')}`)
+      .setMinValue(1).setMaxValue(MAX_BACKFILL_LIMIT)),
 ].map((command) => command.setDMPermission(false).toJSON());

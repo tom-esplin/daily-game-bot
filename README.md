@@ -33,9 +33,11 @@ The bot must remain running to collect new posts. Registration installs this pro
 | `/game add key name template direction` | Add a game; requires Manage Server |
 | `/game disable game` | Pause collection and hide that game's scores; requires Manage Server |
 | `/game enable game` | Resume collection and restore stored scores; requires Manage Server |
-| `/backfill [limit]` | Import the latest 1–1,000 messages, default 100; requires Manage Server |
+| `/backfill [limit]` | Import the latest 1–10,000 messages, default 100; requires Manage Server |
 
 Replies are private to the person who runs the command. Tracking is configured separately for each server; scores never cross server boundaries.
+
+Use `/backfill limit:10000` for a larger historical import. Messages are fetched in batches of at most 100, with progress updates every 1,000 messages. The import stops at the requested limit or the beginning of the channel history. Reimporting existing messages updates their scores without duplicating them. One backfill can run per server at a time; keep the bot running until it finishes. Re-register commands once after updating to make the larger limit available in Discord.
 
 The leaderboard defaults to **Monthly**, adding together all scores posted during the current calendar month. Choose **All Time** from the period dropdown to total scores from every recorded month. Both views work for Overall and individual games. You can also run `/leaderboard period:alltime` or `/leaderboard game:maptapp period:monthly`.
 
@@ -166,7 +168,7 @@ export const GAME_SCORE_RANGES = {
 };
 ```
 
-Restart the bot after editing score ranges; existing raw scores are converted using the new ranges without backfill. Previously saved database ranges are ignored in favor of the code settings. Run `npm run register` once to remove the old scale subcommand and range options from Discord, then restart. The Codenames round-scoring change requires `/backfill` to recalculate stored results using the original round data; the latest 1,000 messages can be scanned with `/backfill limit:1000`.
+Restart the bot after editing score ranges; existing raw scores are converted using the new ranges without backfill. Previously saved database ranges are ignored in favor of the code settings. Run `npm run register` once to remove the old scale subcommand and range options from Discord, then restart. The Codenames round-scoring change requires `/backfill` to recalculate stored results using the original round data; the latest 10,000 messages can be scanned with `/backfill limit:10000`.
 
 Unplayed games add no points. Participation counts the daily results included in the selected period, across all enabled games for Overall or within the selected game. Repeated posts still count only once per player, game, and puzzle. Tied totals share ranks. Both Krillion and any added games use their configured higher/lower direction; confirm the correct rule when adding a game.
 
