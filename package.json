@@ -1,0 +1,14 @@
+{
+  "name": "daily-games-discord-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Track shared daily game scores and equally weighted leaderboards in Discord.",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "register": "node --env-file-if-exists=.env src/register.js",
+    "test": "node --test"
+  },
+  "dependencies": { "discord.js": "^14.22.1" }
+}
