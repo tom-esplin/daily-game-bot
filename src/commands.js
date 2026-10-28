@@ -4,6 +4,7 @@ import { DEFAULT_BACKFILL_LIMIT, MAX_BACKFILL_LIMIT } from './backfill.js';
 const gameOption = (option) => option.setName('game').setDescription('Game key, for example krillion').setMaxLength(32).setAutocomplete(true);
 
 export const commands = [
+  new SlashCommandBuilder().setName('explain-dailys').setDescription('Learn game scoring, leaderboard rules, and player commands'),
   new SlashCommandBuilder().setName('track').setDescription('Add a channel to track daily game scores')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addChannelOption((option) => option.setName('channel').setDescription('Channel containing shared scores').setRequired(true)
@@ -17,7 +18,6 @@ export const commands = [
     .addIntegerOption((option) => option.setName('page').setDescription('Page number').setMinValue(1)),
   new SlashCommandBuilder().setName('leaderboard').setDescription('Show monthly or all-time score totals')
     .addStringOption(gameOption)
-    .addIntegerOption((option) => option.setName('page').setDescription('Page number').setMinValue(1))
     .addStringOption((option) => option.setName('period').setDescription('Defaults to the current month')
       .addChoices({ name: 'Monthly', value: 'monthly' }, { name: 'All Time', value: 'alltime' })),
   new SlashCommandBuilder().setName('score').setDescription('Show a player’s monthly or all-time total')

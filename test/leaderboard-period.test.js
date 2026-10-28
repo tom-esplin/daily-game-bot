@@ -113,6 +113,7 @@ test('period switches reset pages and persist through game changes, navigation, 
 
 test('slash command offers Monthly and All Time and passes the selected period to the card', async () => {
   const definition = commands.find((command) => command.name === 'leaderboard');
+  assert.equal(definition.options.some((option) => option.name === 'page'), false);
   assert.deepEqual(definition.options.find((option) => option.name === 'period').choices.map((choice) => choice.value), ['monthly', 'alltime']);
   const store = new Store(':memory:');
   try {

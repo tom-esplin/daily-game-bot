@@ -26,10 +26,11 @@ The bot must remain running to collect new posts. Registration installs this pro
 
 | Command | Purpose |
 | --- | --- |
+| `/explain-dailys` | Read game scoring, leaderboard rules, and all player commands; no admin permission required |
 | `/track channel` | Add a tracked channel without replacing others; requires Manage Server |
 | `/untrack channel` | Stop tracking a channel and retain recorded scores; requires Manage Server |
 | `/channels [page]` | List tracked channels, 20 per page; requires Manage Server |
-| `/leaderboard [game] [page] [period]` | Monthly totals by default; choose All Time; interactive menus and 5 players per page |
+| `/leaderboard [game] [period]` | Monthly totals by default; choose All Time; interactive menus and 5 players per page |
 | `/score [game] [user] [period]` | User total, games, and average; defaults to your monthly overall score |
 | `/game list` | List games, templates, and score direction |
 | `/game add key name template direction` | Add a game; requires Manage Server |
@@ -38,6 +39,8 @@ The bot must remain running to collect new posts. Registration installs this pro
 | `/backfill [limit] [channel]` | Import 1–10,000 messages per tracked channel, default 100; optionally select one channel; requires Manage Server |
 
 Replies are private to the person who runs the command. Tracking is configured separately for each server; scores never cross server boundaries.
+
+`/explain-dailys` opens a paginated guide with Previous/Next buttons. It explains each configured game (including custom games and their active conversion ranges), monthly/all-time totals, duplicate results, points/game counts/averages, and usage examples for every non-admin command. Servers without configured games see the built-in game guide. Run `npm run register` for each server and restart after updating to make the command available.
 
 A server can track any number of text channels with no bot-imposed channel limit. Use `/track` to add each one, `/channels` to list them, and `/untrack` to stop collecting new posts from one. All channels contribute to the same server leaderboards. Existing single-channel settings migrate automatically on restart.
 

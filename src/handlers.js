@@ -1,6 +1,7 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { buildLeaderboardView, handleLeaderboardComponent } from './leaderboard-view.js';
 import { buildUserScoreView } from './score-view.js';
+import { buildExplainView, handleExplainComponent } from './explain-view.js';
 import { DEFAULT_BACKFILL_LIMIT, importChannelHistory, validateBackfillLimit } from './backfill.js';
 
 const number = (value) => Number(value.toFixed(2)).toString();
@@ -14,6 +15,10 @@ function requireAdmin(interaction) {
 }
 
 export async function handleInteraction(interaction, store) {
+  if (interaction.isButton?.() && interaction.customId?.startsWith('dailyhelp:')) {
+    await handleExplainComponent(interaction, store);
+    return;
+  }
   if ((interaction.isButton?.() || interaction.isStringSelectMenu?.()) && interaction.customId?.startsWith('lb:')) {
     await handleLeaderboardComponent(interaction, store);
     return;
@@ -31,6 +36,12 @@ export async function handleInteraction(interaction, store) {
   const guildId = interaction.guildId;
   let content;
   switch (interaction.commandName) {
+    case 'explain-dailys': {
+      await interaction.editReply(buildExplainView(store, guildId, {
+        ownerId: interaction.user.id,
+      }));
+      return;
+    }
     case 'track': {
       requireAdmin(interaction);
       if (busyGuilds.has(guildId)) throw new Error('Wait for the current import to finish before changing tracked channels.');
@@ -93,7 +104,6 @@ export async function handleInteraction(interaction, store) {
     case 'leaderboard': {
       await interaction.editReply(buildLeaderboardView(store, guildId, {
         ownerId: interaction.user.id, gameKey: interaction.options.getString('game'),
-        page: interaction.options.getInteger('page') || 1,
         period: interaction.options.getString('period') || 'monthly',
       }));
       return;
