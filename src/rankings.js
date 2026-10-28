@@ -35,10 +35,14 @@ export function rankSubmissions(submissions, games) {
   });
 }
 
-export function leaderboard(submissions, games, gameKey = null) {
+export function leaderboard(submissions, games, gameKey = null, { sortBy = 'total' } = {}) {
   const lower = gameKey && games.find((game) => game.key === gameKey)?.direction === 'lower';
   return rankSubmissions(submissions, games)
     .filter((player) => !gameKey || player.games.has(gameKey))
-    .map((player) => ({ ...player, points: gameKey ? player.games.get(gameKey).score : player.points }))
-    .sort((a, b) => (lower ? a.points - b.points : b.points - a.points) || a.userId.localeCompare(b.userId));
+    .map((player) => {
+      const points = gameKey ? player.games.get(gameKey).score : player.points;
+      const count = gameKey ? player.games.get(gameKey).count : player.count;
+      return { ...player, points, rankingScore: sortBy === 'average' ? points / count : points };
+    })
+    .sort((a, b) => (lower ? a.rankingScore - b.rankingScore : b.rankingScore - a.rankingScore) || a.userId.localeCompare(b.userId));
 }

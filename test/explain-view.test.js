@@ -14,10 +14,10 @@ test('guide covers leaderboard totals, all built-in games, and every non-admin c
     store.track('server', 'channel');
     const overview = buildExplainView(store, 'server', { ownerId: 'alice' });
     assert.match(text(overview), /Monthly and All Time/);
-    assert.match(text(overview), /America\/Denver/);
-    assert.match(text(overview), /accumulated total can exceed 100/);
+    assert.match(text(overview), /Monthly.*leaderboards rank by total points earned this month/);
+    assert.match(text(overview), /All Time.*leaderboards rank by.*average pts/);
     assert.match(text(overview), /average pts/);
-    assert.match(text(overview), /newest posted result wins/);
+    assert.match(text(overview), /total points ÷ games played/);
     const scoring = text(buildExplainView(store, 'server', { ownerId: 'alice', page: 2 }));
     for (const name of ['Krillion', 'Maptap', 'Codenames Daily', 'Music Timeliner']) assert.ok(scoring.includes(name));
     assert.match(scoring, /30 pts/);

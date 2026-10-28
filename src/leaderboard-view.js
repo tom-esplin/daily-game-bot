@@ -20,14 +20,16 @@ export function buildLeaderboardView(store, guildId, {
     gameKey = null;
     page = 1;
   }
-  const rows = leaderboard(submissionsForPeriod(store.submissions(guildId), period, now), games, gameKey);
+  const rows = leaderboard(submissionsForPeriod(store.submissions(guildId), period, now), games, gameKey, {
+    sortBy: period === 'alltime' ? 'average' : 'total',
+  });
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   if (!Number.isSafeInteger(page) || page < 1 || page > pages) {
     if (!recover) throw new Error(`Choose a page between 1 and ${pages}.`);
     page = Math.max(1, Math.min(Number.isSafeInteger(page) ? page : 1, pages));
   }
   const lines = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((player) => {
-    const rank = rows.findIndex((row) => Math.abs(row.points - player.points) < 1e-9) + 1;
+    const rank = rows.findIndex((row) => Math.abs(row.rankingScore - player.rankingScore) < 1e-9) + 1;
     const place = ['🥇', '🥈', '🥉'][rank - 1] || `**${rank}.**`;
     const stats = gameKey ? player.games.get(gameKey) : null;
     const count = stats ? stats.count : player.count;

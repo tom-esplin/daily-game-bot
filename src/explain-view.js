@@ -33,6 +33,8 @@ function helpPages(store, guildId) {
     'Welcome to the daily games competition, gamers. To get started simply start pasting daily game output into the daily-games or codenames-daily channel. The bot will automatically start tracking your score. Currently, it supports Krillion, Codenames Daily, Music Timeliner, and Maptapp.',
   ).addFields(
     { name: 'How results become leaderboard points', value: 'A per-game leaderboard adds that game’s **native scores**. The overall converts **each result** to 0–100 first, then adds them: 350 Krillion pts → 50 overall pts; 434 Maptap pts → 43.4 overall pts with the standard ranges. Playing more daily puzzles adds more points.' },
+    { name: 'Monthly and All Time', value: '**Monthly** leaderboards rank by total points earned this month.\n\n**All Time** leaderboards rank by **average pts**: total points ÷ games played.\n\nThis applies to Overall and individual games. Overall uses scores converted to 0–100; individual games use their original scoring scale. Total points and games played are still displayed.' },
+    { name: 'Monthly winners', value: 'At the end of each month, the top 3 people on leaderboard will be announced at 6:00 pm on the last day as the winners of the month.' },
   )];
   for (let start = 0; start < games.length; start += 6) {
     pages.push(new EmbedBuilder().setTitle('🎮 How each game is scored').addFields(
@@ -43,10 +45,10 @@ function helpPages(store, guildId) {
     ));
   }
   pages.push(new EmbedBuilder().setTitle('💬 Commands for players').addFields(
-    { name: '/leaderboard [game] [period]', value: '`/leaderboard` — current-month overall totals.\n`/leaderboard period:alltime` — all-time overall totals.\n`/leaderboard game:maptapp period:monthly` — one game.\nThe game and period menus switch views; Previous/Next show **5 players per page**; Refresh reloads scores. Changing a filter resets to page 1.' },
+    { name: '/leaderboard [game] [period]', value: '`/leaderboard` — current-month overall totals.\n`/leaderboard period:alltime` — all-time overall totals.\n`/leaderboard game:maptapp period:monthly` — one game.'},
     { name: '/score [user] [game] [period]', value: '`/score` — your monthly overall total, game count, and average.\n`/score period:alltime` — your all-time score.\n`/score user:@Alice` — another player’s monthly score; select the actual user in Discord.\n`/score user:@Alice game:krillion period:alltime` — another player’s total for one game.\nWithout a game filter, Overall uses converted points. Users without results show 0 pts and 0 games.' },
     { name: '/game list', value: 'Show this server’s game names, **keys**, enabled/disabled status, templates, score directions, and active conversion ranges. Use a key such as `maptapp` in a command’s `game` option.' },
-    { name: '/explain-dailys', value: 'Open this guide. Use Previous/Next to browse. This guide and the commands above do not require Manage Server; your server can still restrict command access.' },
+    { name: '/explain-dailys', value: 'Open this guide. Use Previous/Next to browse.' },
   ));
   return pages;
 }
