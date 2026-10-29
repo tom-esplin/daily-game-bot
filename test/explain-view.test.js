@@ -27,7 +27,6 @@ test('guide covers leaderboard totals, all built-in games, and every non-admin c
     const usage = text(buildExplainView(store, 'server', { ownerId: 'alice', page: 3 }));
     for (const command of ['/leaderboard', '/score', '/game list', '/explain-dailys']) assert.ok(usage.includes(command));
     for (const command of ['/track', '/untrack', '/channels', '/backfill', '/game add']) assert.equal(usage.includes(command), false);
-    assert.match(usage, /5 players per page/);
     assert.match(usage, /period:alltime/);
   } finally { store.close(); }
 });

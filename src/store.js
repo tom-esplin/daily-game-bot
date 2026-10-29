@@ -23,6 +23,13 @@ export class Store {
         PRIMARY KEY(guild_id, channel_id)
       );
       CREATE TABLE IF NOT EXISTS app_migrations (name TEXT PRIMARY KEY);
+      CREATE TABLE IF NOT EXISTS monthly_announcements (
+        guild_id TEXT NOT NULL, month TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('pending','sent','empty')),
+        payload_json TEXT NOT NULL, created_at INTEGER NOT NULL,
+        channel_id TEXT, message_id TEXT,
+        PRIMARY KEY(guild_id, month)
+      );
       CREATE TABLE IF NOT EXISTS games (
         guild_id TEXT NOT NULL, key TEXT NOT NULL, name TEXT NOT NULL,
         template TEXT NOT NULL, direction TEXT NOT NULL CHECK(direction IN ('higher','lower')),
@@ -134,7 +141,27 @@ export class Store {
     }
     return parsed.length;
   }
-  submissions(guildId) {
+  monthlyAnnouncement(guildId, month) {
+    return this.db.prepare('SELECT * FROM monthly_announcements WHERE guild_id=? AND month=?').get(guildId, month);
+  }
+  pendingMonthlyAnnouncements(guildId) {
+    return this.db.prepare("SELECT * FROM monthly_announcements WHERE guild_id=? AND status='pending' ORDER BY month").all(guildId);
+  }
+  createMonthlyAnnouncement(guildId, month, payload, createdAt) {
+    const result = this.db.prepare(`INSERT OR IGNORE INTO monthly_announcements
+      (guild_id, month, status, payload_json, created_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(guildId, month, payload ? 'pending' : 'empty', JSON.stringify(payload), createdAt);
+    return { created: result.changes > 0, record: this.monthlyAnnouncement(guildId, month) };
+  }
+  setMonthlyAnnouncementChannel(guildId, month, channelId) {
+    this.db.prepare("UPDATE monthly_announcements SET channel_id=? WHERE guild_id=? AND month=? AND status='pending'").run(channelId, guildId, month);
+  }
+  finishMonthlyAnnouncement(guildId, month, channelId, messageId) {
+    this.db.prepare(`UPDATE monthly_announcements SET status='sent', channel_id=?, message_id=?
+      WHERE guild_id=? AND month=?`).run(channelId, messageId, guildId, month);
+  }
+  submissions(guildId, { beforeTimestamp } = {}) {
+    if (beforeTimestamp !== undefined && !Number.isSafeInteger(beforeTimestamp)) throw new Error('Invalid score cutoff timestamp.');
     // Preserve source messages, but count only the newest post for each player/puzzle.
     return this.db.prepare(`
       SELECT * FROM (
@@ -143,8 +170,8 @@ export class Store {
           ORDER BY s.created_at DESC, length(s.message_id) DESC, s.message_id DESC
         ) AS position
         FROM submissions s JOIN games g ON s.guild_id=g.guild_id AND s.game_key=g.key
-        WHERE s.guild_id=? AND g.enabled=1
+        WHERE s.guild_id=? AND g.enabled=1 ${beforeTimestamp === undefined ? '' : 'AND s.created_at<=?'}
       ) WHERE position=1
-    `).all(guildId);
+    `).all(...(beforeTimestamp === undefined ? [guildId] : [guildId, beforeTimestamp]));
   }
 }

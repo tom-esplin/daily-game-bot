@@ -54,6 +54,18 @@ The card shows each player as a separate block: their medal/rank and name, then 
 
 Monthly boundaries use the original Discord message posting timestamp in `America/Denver`, configured in `src/leaderboard-period.js`. This also applies to games that include a puzzle date: the posting date decides leaderboard membership. Backfill uses the original timestamp, and edits do not move a message to the current month. The view switches automatically when a new calendar month begins; Refresh loads the current month's standings. Changing the time-zone setting requires a restart. Re-register commands once to add the `period` option, then restart the bot. Existing stored scores can be totaled immediately, without a new backfill for this leaderboard change.
 
+## Monthly winners announcements
+
+While the bot is running, it checks every 30 seconds for **6:00 pm on the last calendar day of the month**, using the same `America/Denver` time zone as monthly standings. Each configured server gets one public winners announcement in its text channel named **general**. The bot needs **View Channel**, **Send Messages**, **Embed Links**, and **Read Message History** there. For a differently named channel or multiple channels named general, set a server-to-channel ID entry in `src/announcements-config.js`.
+
+The announcement lists the first three players on the **monthly overall leaderboard by total converted points**, showing total pts, games, and average pts. It uses results posted through the 6:00 pm cutoff, including earlier versions of cross-posted results when a later repost is after the cutoff. The winner snapshot is saved before sending, so retrying does not change the winners. Exactly three players are selected when available; ties use the leaderboard's stable user-ID ordering. If fewer than three players have results, the available players are announced; months without results are skipped.
+
+If the Discord username **inklingbot_** is absent from the three winners, the message includes **Nice try, Gabe 😈**. Current winner usernames are checked when available, falling back to the latest recorded username. Winner mentions are displayed without notification pings.
+
+Receipts in SQLite prevent repeated announcements after normal restarts. Pending sends retry automatically, including after month rollover. If sending succeeded but saving its receipt failed, the bot checks channel history before retrying; a deterministic Discord nonce also guards against duplicate requests. Keep the bot online at the deadline. Restarting later on the same evening also creates the announcement; months with no scheduled attempt before the date rolls over are not retrospectively created. Monthly leaderboards continue accumulating later posts after 6:00 pm, while announced winners remain frozen at the cutoff.
+
+Restart after updating to activate this scheduler. No new commands or command registration are needed. Tests simulate Discord sends; they do not publish announcements to a live server.
+
 ## Adding games
 
 Templates contain exactly one `{puzzle}` and one `{score}` token. Replace the changing puzzle number or date with `{puzzle}` and the changing score with `{score}`. Scores may be signed or decimal numbers. Puzzles may be nonnegative integers, ISO dates such as `2026-10-20`, day-month-year dates such as `22.10.2026`, or English month dates such as `October 20` or `October 20, 2026`.

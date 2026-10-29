@@ -2,9 +2,11 @@ import { Client, Events, GatewayIntentBits, MessageFlags, Partials } from 'disco
 import { config } from './config.js';
 import { Store } from './store.js';
 import { handleInteraction } from './handlers.js';
+import { startMonthlyAnnouncements } from './monthly-announcements.js';
 
 let store;
 let client;
+let stopAnnouncements = async () => {};
 try {
   const settings = config();
   store = new Store(settings.databasePath);
@@ -13,7 +15,10 @@ try {
     partials: [Partials.Message, Partials.Channel],
     allowedMentions: { parse: [] },
   });
-  client.once(Events.ClientReady, (ready) => console.log(`Logged in as ${ready.user.tag}. Use /track to add score channels.`));
+  client.once(Events.ClientReady, (ready) => {
+    console.log(`Logged in as ${ready.user.tag}. Use /track to add score channels.`);
+    stopAnnouncements = startMonthlyAnnouncements(client, store);
+  });
   client.on(Events.MessageCreate, (message) => {
     try { store.ingest(message); } catch (error) { console.error('Could not record a message:', error.message); }
   });
@@ -48,12 +53,21 @@ try {
     }
   });
   client.on(Events.Error, (error) => console.error('Discord client error:', error.message));
-  const stop = () => { client.destroy(); store.close(); process.exit(0); };
+  let stopping = false;
+  const stop = async () => {
+    if (stopping) return;
+    stopping = true;
+    await stopAnnouncements();
+    client.destroy();
+    store.close();
+    process.exit(0);
+  };
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
   await client.login(settings.token);
 } catch (error) {
   console.error('Bot startup failed:', error.message);
+  await stopAnnouncements();
   client?.destroy();
   store?.close();
   process.exitCode = 1;
