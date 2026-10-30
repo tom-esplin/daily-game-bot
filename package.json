@@ -6,8 +6,12 @@
   "description": "Track shared daily game scores and equally weighted leaderboards in Discord.",
   "engines": { "node": ">=24.0.0" },
   "scripts": {
-    "start": "node --env-file-if-exists=.env src/index.js",
-    "register": "node --env-file-if-exists=.env src/register.js",
+    "start": "node --env-file-if-exists=.env src/daily-game-tracker/index.js",
+    "register": "node --env-file-if-exists=.env src/daily-game-tracker/register.js",
+    "daily": "node --env-file-if-exists=.env src/daily-player/daily-player-cli.js",
+    "daily:audio": "node src/daily-player/local-audio-cli.js",
+    "daily:setup": "npm --prefix browser-runtime install",
+    "daily:browser": "node browser-runtime/node_modules/playwright/cli.js install chromium",
     "test": "node --test"
   },
   "dependencies": { "discord.js": "^14.22.1" }

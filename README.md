@@ -52,11 +52,11 @@ The card shows each player as a separate block: their medal/rank and name, then 
 
 `/score` defaults to your own current-month overall total. Use `/score period:alltime` for your all-time overall score, `/score user:@Alice period:monthly` for another user's monthly total, or `/score game:maptapp user:@Alice period:alltime` to total one game. Replies include points, game count, and average points using the leaderboard's period, normalization, and deduplication rules. A user without results gets 0 points and 0 games. The former puzzle-specific score lookup has been replaced by these summaries; re-register commands and restart after updating. Existing saved results require no backfill for this command change.
 
-Monthly boundaries use the original Discord message posting timestamp in `America/Denver`, configured in `src/leaderboard-period.js`. This also applies to games that include a puzzle date: the posting date decides leaderboard membership. Backfill uses the original timestamp, and edits do not move a message to the current month. The view switches automatically when a new calendar month begins; Refresh loads the current month's standings. Changing the time-zone setting requires a restart. Re-register commands once to add the `period` option, then restart the bot. Existing stored scores can be totaled immediately, without a new backfill for this leaderboard change.
+Monthly boundaries use the original Discord message posting timestamp in `America/Denver`, configured in `src/daily-game-tracker/leaderboard-period.js`. This also applies to games that include a puzzle date: the posting date decides leaderboard membership. Backfill uses the original timestamp, and edits do not move a message to the current month. The view switches automatically when a new calendar month begins; Refresh loads the current month's standings. Changing the time-zone setting requires a restart. Re-register commands once to add the `period` option, then restart the bot. Existing stored scores can be totaled immediately, without a new backfill for this leaderboard change.
 
 ## Monthly winners announcements
 
-While the bot is running, it checks every 30 seconds for **6:00 pm on the last calendar day of the month**, using the same `America/Denver` time zone as monthly standings. Each configured server gets one public winners announcement in its text channel named **general**. The bot needs **View Channel**, **Send Messages**, **Embed Links**, and **Read Message History** there. For a differently named channel or multiple channels named general, set a server-to-channel ID entry in `src/announcements-config.js`.
+While the bot is running, it checks every 30 seconds for **6:00 pm on the last calendar day of the month**, using the same `America/Denver` time zone as monthly standings. Each configured server gets one public winners announcement in its text channel named **general**. The bot needs **View Channel**, **Send Messages**, **Embed Links**, and **Read Message History** there. For a differently named channel or multiple channels named general, set a server-to-channel ID entry in `src/daily-game-tracker/announcements-config.js`.
 
 The announcement lists the first three players on the **monthly overall leaderboard by total converted points**, showing total pts, games, and average pts. It uses results posted through the 6:00 pm cutoff, including earlier versions of cross-posted results when a later repost is after the cutoff. The winner snapshot is saved before sending, so retrying does not change the winners. Exactly three players are selected when available; ties use the leaderboard's stable user-ID ordering. If fewer than three players have results, the available players are announced; months without results are skipped.
 
@@ -115,9 +115,9 @@ Then run `/backfill` if you want to import existing posts. This version supports
 
 ## Codenames Daily
 
-Codenames has a built-in parser because its score must be calculated from four rounds. It uses the game key `codenames` and is added automatically to existing tracked servers when the bot restarts, as well as new servers when `/track` runs. No `/game add` command is needed. Existing custom games with the same key are preserved.
+Codenames has a built-in parser because its score must be calculated from three main rounds and an optional fourth bonus round. It uses the game key `codenames` and is added automatically to existing tracked servers when the bot restarts, as well as new servers when `/track` runs. No `/game add` command is needed. Existing custom games with the same key are preserved.
 
-The bot reads the `CODENAMES DAILY` heading, the `day.month.year` date, and four clue/result lines. Blank lines, the optional "Can you beat this?" footer, and the game's share link are supported. The publisher's [share example](https://www.czechgames.com/news/popular-daily-challenges-from-the-codenames-app-come-to-your-browser) uses `✅` for correct guesses and `❌` for an incorrect guess.
+The bot reads the `CODENAMES DAILY` heading, the `day.month.year` date, and three or four clue/result lines. A fourth line is accepted only if the first three rounds are all correct. Blank lines, the optional "Can you beat this?" footer, and the game's share link are supported. The publisher's [share example](https://www.czechgames.com/news/popular-daily-challenges-from-the-codenames-app-come-to-your-browser) uses `✅` for correct guesses and `❌` for an incorrect guess.
 
 ```text
 CODENAMES DAILY
@@ -141,7 +141,7 @@ floor(
 )
 ```
 
-The example earns `floor(30 + 30 + 30 + 10) = 100`. Each of the first three rounds independently earns up to 30 points, regardless of how many target words it contains. The fourth independently adds up to 10 bonus points, with the complete score capped at 100. Only the final total is rounded down to an integer. Two perfect main rounds with zero in the other rounds earn 60. Correct guesses before a `❌` earn partial credit, and remaining unguessed target words earn none. The bot requires all four round results and ignores incomplete or malformed shares.
+The example earns `floor(30 + 30 + 30 + 10) = 100`. Each of the first three rounds independently earns up to 30 points, regardless of its target count. Three-round results have a maximum of 90. If the first three are perfect, the optional fourth round adds up to 10 bonus points, for a maximum of 100. Only the final total is rounded down. Two perfect main rounds with zero in the third earn 60. Correct guesses before a `❌` earn partial credit, and remaining unguessed words earn none. For example, `FERRARI 3 ✅✅❌`, `PAINFUL 5 ✅✅✅✅✅`, and `SOVIET 3 ✅✅✅` earn 80 points. Fewer than three rounds, more than four rounds, malformed rounds, and bonus rounds following any main-round mistake are rejected.
 
 Run `/backfill` to import older Codenames shares, or recalculate previously imported shares after a scoring change. Use `/score game:codenames` for your monthly total or `/leaderboard game:codenames` for standings. Individual Codenames results score up to 100; the period total can exceed 100. `/game disable game:codenames` pauses it without deleting saved scores. Old stored results retain their previous scoring until their source messages are reimported; backfill the relevant messages after updating.
 
@@ -176,7 +176,7 @@ Lower is better:  100 × (maximum − score) / (maximum − minimum)
 
 Each converted result is clamped to 0–100, then all converted results in the selected period are added together. For example, Krillion 350/700 contributes 50, Maptap 434/1000 contributes 43.4, Music Timeliner 75 contributes 75, and Codenames 100 contributes 100: the overall total is 268.4. Another perfect Krillion result adds 100 to reach 368.4; the Krillion-only total would be 350 + 700 = 1050. Each game result can contribute up to 100 overall points, so playing more daily puzzles adds more points. The accumulated total is not capped at 100. Other players' submissions do not change a player's points.
 
-Score ranges are configured only in `src/scoring-config.js`. Built-in ranges are Krillion 0–700, Maptap 0–1000, and Codenames/Music Timeliner 0–100. Wordle is configured as 1–6. Maptap's [official scoring FAQ](https://maptap.gg/faq) explains its 1,000-point total. The Krillion daily scale is configured for seven 100-point rounds. Games without an entry in the code default to 0–100. For a game where lower scores win, the minimum maps to 100 and the maximum maps to 0. Use `/game list` to inspect ranges, or edit the code, for example:
+Score ranges are configured only in `src/daily-game-tracker/scoring-config.js`. Built-in ranges are Krillion 0–700, Maptap 0–1000, and Codenames/Music Timeliner 0–100. Wordle is configured as 1–6. Maptap's [official scoring FAQ](https://maptap.gg/faq) explains its 1,000-point total. The Krillion daily scale is configured for seven 100-point rounds. Games without an entry in the code default to 0–100. For a game where lower scores win, the minimum maps to 100 and the maximum maps to 0. Use `/game list` to inspect ranges, or edit the code, for example:
 
 ```javascript
 export const GAME_SCORE_RANGES = {
@@ -193,9 +193,91 @@ Restart the bot after editing score ranges; existing raw scores are converted us
 
 Unplayed games add no points. Participation counts the daily results included in the selected period, across all enabled games for Overall or within the selected game. Repeated posts still count only once per player, game, and puzzle. Tied totals share ranks. Both Krillion and any added games use their configured higher/lower direction; confirm the correct rule when adding a game.
 
+## Optional AI daily player: lnklingbot
+
+The AI player starts at **11:00 am America/Denver** and competes using the existing Discord bot account. Its leaderboard and score name is **lnklingbot**; use `/score user:@YourBot` to query it. Codenames posts to `#codenames-daily`; the other games post to `#daily-games`. Destination channel IDs are configured per server. The existing `/track` command must already track both destinations.
+
+The implementation is **disabled by default and has not yet passed live game validation**. Each game uses a bounded screenshot-driven Playwright agent rather than relying on an undocumented game API. Headless/headed compatibility, Krillion timing, Maptap globe interaction, native share capture, and Music Timeliner audio capture must be verified on the hosting machine. The code never substitutes a model-written result for a missing native share result.
+
+Install the optional browser runtime separately, leaving the score tracker's dependency installation unchanged:
+
+```powershell
+npm run daily:setup
+npm run daily:browser
+```
+
+Add `OPENAI_API_KEY` to `.env`. Sol uses `gpt-6.1-sol` with medium reasoning through the Responses API. Music defaults to the free local Qwen2-Audio listener described below. If your project has OpenAI audio access, set `DAILY_AUDIO_BACKEND=openai` to use `gpt-audio-1.5` through Chat Completions with the same key. There is no daily dollar cap for OpenAI calls. Each game is limited to 60 total model requests (including local audio) and 15 minutes, with the game's shorter timers still applying. Model access and listener readiness are checked before starting an attempt, and usage records are stored in SQLite.
+
+The music listener captures the audio from the game's Play control and sends neutral PCM WAV bytes, with no source URL, track identifier, hidden title, or release metadata. If browser media capture is blocked by cross-origin restrictions, it can decode the observed audio response for that exact played element and extract only the portion already played, up to 12 seconds. It does not use fingerprinting, catalogs, or external searches. The audio model reports possible identity/era and uncertainty; Sol uses that assessment and previously revealed timeline cards to place the next song. Wrong guesses count normally; missing/silent audio or API failures stop that attempt as a technical error. Recognition accuracy remains unverified.
+
+Run these checks before enabling automation:
+
+```powershell
+npm run daily -- --preflight
+npm run daily -- --list-models
+npm run daily -- --preflight --game krillion
+npm run daily -- --inspect --game krillion
+npm run daily -- --dry-run --game krillion
+npm run daily -- --dry-run --game codenames
+npm run daily -- --dry-run --game maptapp
+npm run daily -- --dry-run --game musictimeliner
+```
+
+`--inspect` opens a game and saves its initial screenshot and visible text without an API key. `--dry-run` plays a complete attempt using temporary browser state and saves the captured result and API usage under `data/daily-player/dry-runs`. Neither command logs into Discord or writes competitive scores. Dry runs do make game requests and, except inspection, paid OpenAI requests. Add `--headed` to observe or debug a game in a visible browser. A dry run does not automatically mark a game verified.
+
+Each CLI run prints its `run.log` and `review.jsonl` locations before preflight and saves progress continuously, including failures. `run.log` identifies browser launch, page loading, model decisions, UI actions, audio capture, and local/OpenAI requests, with a waiting message every 10 seconds. It also includes each model-provided decision summary, self-reported confidence and audio assessment. These are explicit output explanations; private internal reasoning is not requested or recorded.
+
+`review.jsonl` contains timestamped events linking each numbered step to its visible game text, `step-001.png` style screenshot, decision summary, exact action, audio assessment, request token usage/timing, and subsequent visible game feedback. `latest-screen.png` also remains available. An `action_result` with `status: executed` means the UI action ran, not that the answer was correct; use the next observation and final native share result to judge success. The final summary records score and per-model call counts. Confidence is the model's own estimate, not a measured probability. Logs and step screenshots survive failed runs and may contain game clues, typed answers and revealed song details; they stay local and are not posted to Discord. API credentials, raw API responses, audio bytes and hidden track metadata are excluded. The local listener's terminal also reports inference progress. If a run appears stuck, share the final lines of `run.log` and the listener output.
+
+If audio preflight returns HTTP 404, the configured audio model cannot be resolved for your key/project. Run `npm run daily -- --list-models` to list available audio-named models. To choose a different model, set `OPENAI_AUDIO_MODEL` in `.env` to a model documented to accept audio through Chat Completions; listing alone does not guarantee endpoint compatibility. No automatic model substitution occurs. A game-specific preflight or dry run for Krillion, Codenames or Maptap checks only Sol, so unavailable music audio access does not block those games or consume a music attempt.
+
+### Free local music listener
+
+The local backend uses the trained [Qwen2-Audio-7B-Instruct](https://huggingface.co/Qwen/Qwen2-Audio-7B-Instruct) model with 4-bit NF4 quantization and FP16 computation, without fingerprinting or a song catalog. It accepts only captured WAV audio; no hidden game metadata is provided. Its observations are passed to Sol for placement. Inference has no API fee, although Sol's gameplay calls remain paid. Initial setup downloads several gigabytes of Python dependencies and approximately 17 GB of model files; subsequent inference uses cached weights.
+
+Use a working Python 3.12 installation with the Windows Python launcher. If your current `python` reports a missing executable from another virtual environment, install or repair Python before creating this project's environment. Do not reuse another project's environment.
+
+```powershell
+py -3.12 -m venv local-audio/.venv
+local-audio/.venv/Scripts/python.exe -m pip install --upgrade pip
+local-audio/.venv/Scripts/python.exe -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
+local-audio/.venv/Scripts/python.exe -m pip install -r local-audio/requirements.txt
+npm run daily:audio
+```
+
+The server binds only to `127.0.0.1:8765`. Wait until it prints `Local listener ready`, then leave that terminal running. The bot checks the loaded model identity before starting Music Timeliner. Set `DAILY_AUDIO_BACKEND=local` in `.env` (also the code default), then in another terminal run:
+
+```powershell
+npm run daily -- --preflight --game musictimeliner
+npm run daily -- --dry-run --game musictimeliner
+```
+
+If the listener exits during loading, rerun `npm run daily:audio` and inspect `data/local-audio/startup.log`. The launcher saves stdout/stderr, enables Python fault tracebacks, and prints the process exit code in decimal and hexadecimal. Startup output includes installed library versions, the current load stage, and available GPU memory. An exit before `Local listener ready` is treated as a failure even if Python returns code zero. The last warning printed is not necessarily the cause of a native crash.
+
+The 4-bit runner requires CUDA-enabled PyTorch and an NVIDIA GPU. This machine reports an RTX 2060 SUPER with 8 GB VRAM and 32 GB system RAM; compatibility, available VRAM during browser use, inference speed, and music accuracy still need a live test. If loading runs out of GPU memory, close other GPU-heavy programs and retry the listener before starting gameplay. Listener setup or inference errors do not fall back to a catalog or silently place songs without audio. `npm run daily:audio -- --download-only` downloads and checks model loading without starting the server. Model cache files live under `data/local-audio-models`; the Python environment and model cache are ignored by Git.
+
+After a game's complete dry run succeeds, edit `src/daily-player/daily-player-config.js`: set its `enabled` and `verified` to `true`, and set `headless: false` only if headed mode was required. Configure `servers` using Discord IDs, for example:
+
+```js
+servers: {
+  'YOUR_SERVER_ID': {
+    dailyChannelId: 'DAILY_GAMES_CHANNEL_ID',
+    codenamesChannelId: 'CODENAMES_DAILY_CHANNEL_ID',
+  },
+},
+```
+
+Set the top-level `enabled: true` and restart the bot. No command registration is required. The bot needs View Channel, Send Messages, Embed Links, and Read Message History in both score channels and `#general`.
+
+The scheduler catches up after 11 am on the current Denver date, without replaying missed dates. Each game has independent persistent browser state. One completed result is reused across servers configured and eligible when the attempt began; enabling a new server does not import the AI's past games. Results are saved before delivery, and persistent receipts plus a history check prevent retries from duplicating scores or replaying games. Keep `data/scores.sqlite` and `data/daily-player/profiles` across restarts. Run only one bot process against a given database/browser profile directory.
+
+Failed attempts are not automatically replayed. After a crash, stale running attempts become failed after the runtime limit plus one minute; they are not restarted because a native game might already have consumed the attempt. Later days use the retained browser profile. Delivery failures retry independently, including after a date change. Delayed scores count in the month of the actual Discord post, matching human submissions. Disable the top-level player switch to stop automation, or disable an individual game to pause that game's attempts and pending deliveries.
+
+AI scores use the same normalization and leaderboard rules as human scores and are eligible for monthly winners. At the existing 6 pm Denver month-end cutoff, a **separate message in #general** celebrates every human with strictly more overall monthly points than lnklingbot. Ties do not qualify, and no celebration is sent if the AI has no monthly results. Celebrations have independent persistent receipts and retries. The existing Gabe easter egg is unchanged.
+
 ## Storage and corrections
 
-- Discord user IDs identify players even after a username change. The submitting username is also stored, and commands display Discord user mentions.
+- Discord user IDs identify players even after a username change. The submitting username is also stored, and commands display Discord user mentions, with the AI competitor displayed as lnklingbot. Unrelated bots are ignored; only AI posts backed by this bot's saved delivery receipts can be recovered during backfill.
 - Only one result per player, game, and puzzle counts. If multiple messages exist, the newest posted message wins; editing an older post does not move it ahead of a newer post.
 - Reimporting a message is safe. Message edits replace its parsed results; removing the recognizable result removes its score. Deleting the winning message restores an earlier matching post if one is stored.
 - Message edits and deletions are processed while connected. `/backfill` refreshes existing posts but cannot discover posts deleted while the bot was offline; those require a future reconciliation feature.
@@ -205,10 +287,21 @@ Unplayed games add no points. Participation counts the daily results included in
 
 ## Development
 
+Source and tests are grouped by responsibility:
+
+```text
+src/daily-player/           Browser automation, model clients, scheduling, and player identity
+src/daily-game-tracker/     Discord entrypoint, commands, parsing, storage, and leaderboards
+test/daily-player/          Player automation and model integration tests
+test/daily-game-tracker/    Tracking, scoring, command, and leaderboard tests
+```
+
+The optional `browser-runtime/` and Python `local-audio/` environments remain at the project root. Existing npm commands run from the project root.
+
 ```powershell
 npm test
 ```
 
 The tests exercise parsing, real SQLite persistence and correction behavior, server isolation, and equal game weighting without connecting to Discord. Live Discord behavior requires a configured token and server.
 
-Source modules: `src/parser.js` reads share templates; `src/codenames.js` parses and scores Codenames results; `src/musictimeliner.js` counts Music Timeliner result squares; `src/store.js` persists submissions; `src/rankings.js` calculates standings; `src/commands.js` defines slash commands; `src/handlers.js` handles requests; `src/index.js` handles Discord events. SQLite uses [Node's built-in SQLite API](https://nodejs.org/download/release/latest-v24.x/docs/api/sqlite.html).
+Source modules: `src/daily-game-tracker/parser.js` reads share templates; `src/daily-game-tracker/codenames.js` parses and scores Codenames results; `src/daily-game-tracker/musictimeliner.js` counts Music Timeliner result squares; `src/daily-game-tracker/store.js` persists submissions; `src/daily-game-tracker/rankings.js` calculates standings; `src/daily-game-tracker/commands.js` defines slash commands; `src/daily-game-tracker/handlers.js` handles requests; `src/daily-game-tracker/index.js` handles Discord events. SQLite uses [Node's built-in SQLite API](https://nodejs.org/download/release/latest-v24.x/docs/api/sqlite.html).

@@ -3,3 +3,5 @@ node_modules/
 data/
 *.sqlite*
 coverage/
+local-audio/.venv/
+__pycache__/
